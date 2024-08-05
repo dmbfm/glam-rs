@@ -1,4 +1,4 @@
-use bincode::{Decode, Encode};
+use bincode::{impl_borrow_decode, Decode, Encode};
 
 use crate::{
     Affine2, Affine3A, DAffine2, DAffine3, DMat2, DMat3, DMat4, DQuat, DVec2, DVec3, DVec4,
@@ -29,6 +29,7 @@ macro_rules! impl_vec_types {
                 Ok($vec2::new(x, y))
             }
         }
+        impl_borrow_decode!($vec2);
 
         impl Encode for $vec3 {
             fn encode<E: bincode::enc::Encoder>(
@@ -52,6 +53,7 @@ macro_rules! impl_vec_types {
                 Ok($vec3::new(x, y, z))
             }
         }
+        impl_borrow_decode!($vec3);
 
         impl Encode for $vec4 {
             fn encode<E: bincode::enc::Encoder>(
@@ -77,6 +79,7 @@ macro_rules! impl_vec_types {
                 Ok($vec4::new(x, y, z, w))
             }
         }
+        impl_borrow_decode!($vec4);
     };
 }
 
@@ -102,6 +105,7 @@ impl Decode for Vec3A {
         Ok(Vec3A::new(x, y, z))
     }
 }
+impl_borrow_decode!(Vec3A);
 
 impl_vec_types!(Vec2, Vec3, Vec4);
 impl_vec_types!(DVec2, DVec3, DVec4);
@@ -136,6 +140,7 @@ impl Decode for Quat {
         Ok(Quat::from_xyzw(x, y, z, w))
     }
 }
+impl_borrow_decode!(Quat);
 
 impl Encode for DQuat {
     fn encode<E: bincode::enc::Encoder>(
@@ -161,6 +166,7 @@ impl Decode for DQuat {
         Ok(DQuat::from_xyzw(x, y, z, w))
     }
 }
+impl_borrow_decode!(DQuat);
 
 macro_rules! impl_mat_types {
     ($mat2: ident, $mat3: ident, $mat4: ident) => {
@@ -184,6 +190,7 @@ macro_rules! impl_mat_types {
                 Ok($mat2::from_cols(x_axis, y_axis))
             }
         }
+        impl_borrow_decode!($mat2);
 
         impl Encode for $mat3 {
             fn encode<E: bincode::enc::Encoder>(
@@ -207,6 +214,7 @@ macro_rules! impl_mat_types {
                 Ok($mat3::from_cols(x_axis, y_axis, z_axis))
             }
         }
+        impl_borrow_decode!($mat3);
 
         impl Encode for $mat4 {
             fn encode<E: bincode::enc::Encoder>(
@@ -232,6 +240,7 @@ macro_rules! impl_mat_types {
                 Ok($mat4::from_cols(x_axis, y_axis, z_axis, w_axis))
             }
         }
+        impl_borrow_decode!($mat4);
     };
 }
 
@@ -257,6 +266,7 @@ impl Decode for Mat3A {
         Ok(Mat3A::from_cols(x_axis, y_axis, z_axis))
     }
 }
+impl_borrow_decode!(Mat3A);
 
 impl_mat_types!(Mat2, Mat3, Mat4);
 impl_mat_types!(DMat2, DMat3, DMat4);
@@ -281,6 +291,7 @@ impl Decode for Affine2 {
         Ok(Affine2::from_mat2_translation(matrix2, translation))
     }
 }
+impl_borrow_decode!(Affine2);
 
 impl Encode for Affine3A {
     fn encode<E: bincode::enc::Encoder>(
@@ -302,6 +313,7 @@ impl Decode for Affine3A {
         Ok(Affine3A::from_mat3_translation(matrix3, translation))
     }
 }
+impl_borrow_decode!(Affine3A);
 
 impl Encode for DAffine2 {
     fn encode<E: bincode::enc::Encoder>(
@@ -323,6 +335,7 @@ impl Decode for DAffine2 {
         Ok(DAffine2::from_mat2_translation(matrix2, translation))
     }
 }
+impl_borrow_decode!(DAffine2);
 
 impl Encode for DAffine3 {
     fn encode<E: bincode::enc::Encoder>(
@@ -344,12 +357,13 @@ impl Decode for DAffine3 {
         Ok(DAffine3::from_mat3_translation(matrix3, translation))
     }
 }
+impl_borrow_decode!(DAffine3);
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use bincode::{config, decode_from_slice, encode_to_vec};
+    use bincode::{config, decode_from_slice, encode_to_vec, Decode, Encode};
 
     #[test]
     fn test_vec2() {
@@ -659,5 +673,22 @@ mod tests {
         let buf = encode_to_vec(&mat, config::standard()).unwrap();
         let (decoded, _) = decode_from_slice(&buf, config::standard()).unwrap();
         assert_eq!(mat, decoded);
+    }
+
+    #[derive(Debug, Encode, Decode, PartialEq)]
+    struct Rect {
+        min: Vec2,
+        max: Vec2,
+    }
+
+    #[test]
+    fn test_rect() {
+        let rect = Rect {
+            min: Vec2::new(1.0, 2.0),
+            max: Vec2::new(3.0, 4.0),
+        };
+        let buf = encode_to_vec(&rect, config::standard()).unwrap();
+        let (decoded, _) = decode_from_slice(&buf, config::standard()).unwrap();
+        assert_eq!(rect, decoded);
     }
 }
